@@ -5,9 +5,8 @@ using UnityEngine;
 public class MainInventory : MonoBehaviour
 {
     [SerializeField] private MoveOnTilemap player;
-    public List<Slot> slots;
-    [SerializeField] private GameObject inventoryCanvas;
-
+    public List<ItemSlot> slots;
+   
     public int[] currentAmmo;// 0 - pistol
     public int[] maxAmmo;
 
@@ -37,12 +36,4 @@ public class MainInventory : MonoBehaviour
         }
     }
 
-    private void Update()
-    {
-        if (Input.GetKey(KeyCode.I))
-        {
-            inventoryCanvas.SetActive(true);
-            player.ChangeCanMove(false);
-        }
-    }
 }

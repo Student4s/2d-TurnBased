@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using static UnityEditor.Progress;
 
-public class Slot : MonoBehaviour, IPointerClickHandler
+public class ItemSlot : MonoBehaviour, IPointerClickHandler
 {
     public Item currentItem;
     public Image icon;
@@ -20,7 +20,20 @@ public class Slot : MonoBehaviour, IPointerClickHandler
         {
             icon.sprite = defaultSprite;
         }
+
+        slotType = "Any";
     }
+
+    public void SetItem(Item item)
+    {
+        if (CanAcceptItem(item))
+        {
+            currentItem = item;
+            icon.sprite = item.icon;
+            icon.enabled = true;
+        }
+    }
+
     public virtual void AddItem(Item newItem)
     {
 
@@ -38,8 +51,14 @@ public class Slot : MonoBehaviour, IPointerClickHandler
         icon.sprite = defaultSprite;
     }
 
-    public bool CanAcceptItem(Item item)//Can put item in slot or not
+    public bool CanAcceptItem(Item item) //Can put item in slot or not
     {
+        if(item == null){
+            Debug.LogError("Null Reference to an item");
+            return false;
+        }
+
+
         if (slotType == "Any" || slotType == item.itemType)
         {
             if (currentItem == null)
@@ -48,7 +67,7 @@ public class Slot : MonoBehaviour, IPointerClickHandler
             }
             else
             {
-                return false;
+                return false; 
             }
         }
         else
@@ -63,7 +82,7 @@ public class Slot : MonoBehaviour, IPointerClickHandler
             if (currentItem.isUsable)
             {
                 currentItem.countOfUse -= 1;
-                Debug.Log("Aboba");
+                Debug.Log("Item");
                 if (currentItem.countOfUse <= 0)
                 {
                     ClearSlot();

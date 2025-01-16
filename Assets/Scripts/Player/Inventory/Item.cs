@@ -11,4 +11,13 @@ public class Item : ScriptableObject
     public bool isUsable;
     public int countOfUse;
     public int idForUse;
+
+    public bool isStackable;
+    public int masStackSize;
+    public int currentStack;
+
+    public Vector2Int cellSize;  // Horizontal size in slots
+    public Vector2Int position; // Vertical size in slots
+
+
 }
