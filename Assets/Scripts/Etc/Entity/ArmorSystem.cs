@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class ArmorSystem : MonoBehaviour
 {
-    public List<Slot> armors;
+    public List<ItemSlot> armors;
     public List<Armor> armorsInGame;// crutch but idk how to make straight
     public Armor armor;// summary armor. using in damage resist
 
@@ -14,25 +14,25 @@ public class ArmorSystem : MonoBehaviour
     }
     private void OnEnable()
     {
-        ItemDragHandler.RecalculateArmor += UpdateArmor;
+        //ItemDragHandler.RecalculateArmor += UpdateArmor;
         
     }
 
     private void OnDisable()
     {
-        ItemDragHandler.RecalculateArmor -= UpdateArmor;
+        //ItemDragHandler.RecalculateArmor -= UpdateArmor;
     }
     public void UpdateArmor()
     {
-        armor.ZeroArmor();
-        for (int i = 0; i < armors.Count; i++)
-        {
-            if(armors[i].currentItem!=null)
-            {
-                armor.AddArmor(armorsInGame[armors[i].currentItem.id]);//change second ID on armor;
-            }
+        // armor.ZeroArmor();
+        // for (int i = 0; i < armors.Count; i++)
+        // {
+        //     if(armors[i].currentItem!=null)
+        //     {
+        //         armor.AddArmor(armorsInGame[armors[i].currentItem.id]);//change second ID on armor;
+        //     }
             
-        }
+        // }
     }
 
 
