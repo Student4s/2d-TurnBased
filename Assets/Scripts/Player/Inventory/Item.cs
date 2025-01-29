@@ -13,7 +13,7 @@ public class Item : ScriptableObject
     public int idForUse;
 
     public bool isStackable;
-    public int masStackSize;
+    public int maxStackSize;
     public int currentStack;
 
     public Vector2Int cellSize;  // Horizontal size in slots

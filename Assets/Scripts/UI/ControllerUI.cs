@@ -10,6 +10,7 @@ public class ControllerUI : MonoBehaviour
     {
         // Ensure the canvas is initialized when the game starts
         CreateCanvas();
+
     }
 
     void Update()
@@ -51,6 +52,9 @@ public class ControllerUI : MonoBehaviour
 
             canvasObject.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             canvasObject.AddComponent<GraphicRaycaster>();
+
+
+
         }
     }
 
