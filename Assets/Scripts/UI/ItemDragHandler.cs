@@ -17,6 +17,7 @@ public class ItemDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     private Transform originalParent;
 
     private GameObject shadowObject;
+    private RectTransform shadowRect;
     private ItemUI itemUI;
 
 
@@ -91,24 +92,20 @@ public class ItemDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     private void CreateShadow()
     {
         shadowObject = new GameObject("Shadow");
-        RectTransform shadowRect = shadowObject.AddComponent<RectTransform>();
+        shadowRect = shadowObject.AddComponent<RectTransform>();
         shadowObject.AddComponent<CanvasRenderer>();
 
         shadowObject.transform.SetParent(canvas.transform, false);
-        shadowRect.sizeDelta = rectTransform.sizeDelta;
+        shadowRect.sizeDelta = new Vector2(itemUI.ItemData.cellSize.x * InventoryUI.CellSize, itemUI.ItemData.cellSize.y * InventoryUI.CellSize);
         shadowRect.pivot = rectTransform.pivot;
         shadowRect.anchorMin = rectTransform.anchorMin;
         shadowRect.anchorMax = rectTransform.anchorMax;
 
         Image shadowImage = shadowObject.AddComponent<Image>();
-        Image originalImage = GetComponent<Image>();
 
-        if (originalImage != null)
-        {
-            shadowImage.sprite = originalImage.sprite;
-            shadowImage.color = new Color(0, 0, 0, 0.2f);
-            shadowImage.raycastTarget = false;
-        }
+        shadowImage.color = new Color(0, 0, 0, 0.2f);
+        shadowImage.raycastTarget = false;
+
 
         shadowObject.SetActive(false);
     }
@@ -132,11 +129,43 @@ public class ItemDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             if (slotHandler != null)
             {
                 RectTransform slotRect = result.gameObject.GetComponent<RectTransform>();
+                shadowRect.sizeDelta = slotRect.sizeDelta;
                 shadowObject.transform.SetParent(slotRect, false);
                 shadowObject.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
 
                 shadowObject.transform.SetParent(inventoryUI.transform, true);
                 rectTransform.SetAsLastSibling();
+                shadowObject.SetActive(true);
+
+
+                return;
+
+
+            }
+
+            ItemGridUI itemGridUI = result.gameObject.GetComponent<ItemGridUI>();
+            if (itemGridUI != null)
+            {
+
+                RectTransform gridRect = result.gameObject.GetComponent<RectTransform>();
+                shadowObject.transform.SetParent(gridRect, false);
+
+                shadowRect.sizeDelta = new Vector2(itemUI.ItemData.cellSize.x * InventoryUI.CellSize, itemUI.ItemData.cellSize.y * InventoryUI.CellSize);
+
+
+                Vector2 localPosition = result.gameObject.transform.InverseTransformPoint(eventData.position);
+                int row = Mathf.FloorToInt(-localPosition.y / InventoryUI.CellSize);
+                int col = Mathf.FloorToInt(localPosition.x / InventoryUI.CellSize);
+
+
+                //shadowRect.position = new Vector3(row * InventoryUI.CellSize, col * InventoryUI.CellSize, 0);
+                shadowRect.anchoredPosition = new Vector2(col * InventoryUI.CellSize, -row * InventoryUI.CellSize);
+                Debug.Log (shadowRect.position.x + " " + shadowRect.position.x + " " + InventoryUI.CellSize);
+
+                // shadowObject.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
+
+                // shadowObject.transform.SetParent(inventoryUI.transform, true);
+                // rectTransform.SetAsLastSibling();
                 shadowObject.SetActive(true);
                 return;
             }
