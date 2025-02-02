@@ -1,6 +1,4 @@
-using System.Data;
 using System.Collections.Generic;
-
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -11,16 +9,13 @@ public class ItemDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     private RectTransform rectTransform;
     private CanvasGroup canvasGroup;
     private InventoryUI inventoryUI;
-
+    private ItemUI itemUI;
 
     private Vector2 originalPosition;
     private Transform originalParent;
-
+    
     private GameObject shadowObject;
     private RectTransform shadowRect;
-    private ItemUI itemUI;
-
-
 
     private void Awake()
     {
@@ -28,7 +23,7 @@ public class ItemDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         canvas = GetComponentInParent<Canvas>();
         inventoryUI = GetComponentInParent<InventoryUI>();
         canvasGroup = gameObject.AddComponent<CanvasGroup>();
-
+        
         if (canvas == null)
         {
             Debug.LogError("Canvas not found. Ensure the object is under a Canvas.");
@@ -41,22 +36,11 @@ public class ItemDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         if (itemUI == null || inventoryUI == null) return;
 
         SaveOriginalState();
-
-        SlotUI originalSlot = GetComponentInParent<SlotUI>();
-        // originalSlot?.RemoveItem();
-
-        if (originalSlot != null)
-        {
-            originalSlot.RemoveItem();
-        }
-        else
-        {
-            inventoryUI.itemGridUI.ClearCells(itemUI, GetGridRow(), GetGridCol());
-        }
-
+        RemoveItemFromSlot();
+        
         rectTransform.SetParent(inventoryUI.transform, true);
         canvasGroup.blocksRaycasts = false;
-
+        
         CreateShadow();
     }
 
@@ -72,12 +56,13 @@ public class ItemDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     {
         canvasGroup.blocksRaycasts = true;
         DestroyShadow();
-
+        
         if (!TryPlaceItem(eventData))
         {
             ResetToOriginalState();
         }
     }
+
     private void SaveOriginalState()
     {
         originalPosition = rectTransform.anchoredPosition;
@@ -89,24 +74,34 @@ public class ItemDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         rectTransform.SetParent(originalParent, true);
         rectTransform.anchoredPosition = originalPosition;
     }
+
+    private void RemoveItemFromSlot()
+    {
+        SlotUI originalSlot = GetComponentInParent<SlotUI>();
+        if (originalSlot != null)
+        {
+            originalSlot.RemoveItem();
+        }
+        else
+        {
+            inventoryUI.itemGridUI.ClearCells(itemUI, GetGridRow(), GetGridCol());
+        }
+    }
+
     private void CreateShadow()
     {
-        shadowObject = new GameObject("Shadow");
-        shadowRect = shadowObject.AddComponent<RectTransform>();
-        shadowObject.AddComponent<CanvasRenderer>();
-
+        shadowObject = new GameObject("Shadow", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        shadowRect = shadowObject.GetComponent<RectTransform>();
+        
         shadowObject.transform.SetParent(canvas.transform, false);
         shadowRect.sizeDelta = new Vector2(itemUI.ItemData.cellSize.x * InventoryUI.CellSize, itemUI.ItemData.cellSize.y * InventoryUI.CellSize);
         shadowRect.pivot = rectTransform.pivot;
         shadowRect.anchorMin = rectTransform.anchorMin;
         shadowRect.anchorMax = rectTransform.anchorMax;
 
-        Image shadowImage = shadowObject.AddComponent<Image>();
-
+        Image shadowImage = shadowObject.GetComponent<Image>();
         shadowImage.color = new Color(0, 0, 0, 0.2f);
         shadowImage.raycastTarget = false;
-
-
         shadowObject.SetActive(false);
     }
 
@@ -120,58 +115,50 @@ public class ItemDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
     private void UpdateShadowPosition(PointerEventData eventData)
     {
+        shadowObject.SetActive(false);
         List<RaycastResult> raycastResults = new List<RaycastResult>();
         EventSystem.current.RaycastAll(eventData, raycastResults);
 
         foreach (var result in raycastResults)
         {
-            SlotOnDropHandler slotHandler = result.gameObject.GetComponent<SlotOnDropHandler>();
-            if (slotHandler != null)
+            if (TryUpdateShadowForSlot(result) || TryUpdateShadowForGrid(result, eventData))
             {
-                RectTransform slotRect = result.gameObject.GetComponent<RectTransform>();
-                shadowRect.sizeDelta = slotRect.sizeDelta;
-                shadowObject.transform.SetParent(slotRect, false);
-                shadowObject.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
-
-                shadowObject.transform.SetParent(inventoryUI.transform, true);
-                rectTransform.SetAsLastSibling();
-                shadowObject.SetActive(true);
-
-
-                return;
-
-
-            }
-
-            ItemGridUI itemGridUI = result.gameObject.GetComponent<ItemGridUI>();
-            if (itemGridUI != null)
-            {
-
-                RectTransform gridRect = result.gameObject.GetComponent<RectTransform>();
-                shadowObject.transform.SetParent(gridRect, false);
-
-                shadowRect.sizeDelta = new Vector2(itemUI.ItemData.cellSize.x * InventoryUI.CellSize, itemUI.ItemData.cellSize.y * InventoryUI.CellSize);
-
-
-                Vector2 localPosition = result.gameObject.transform.InverseTransformPoint(eventData.position);
-                int row = Mathf.FloorToInt(-localPosition.y / InventoryUI.CellSize);
-                int col = Mathf.FloorToInt(localPosition.x / InventoryUI.CellSize);
-
-
-                //shadowRect.position = new Vector3(row * InventoryUI.CellSize, col * InventoryUI.CellSize, 0);
-                shadowRect.anchoredPosition = new Vector2(col * InventoryUI.CellSize, -row * InventoryUI.CellSize);
-                Debug.Log (shadowRect.position.x + " " + shadowRect.position.x + " " + InventoryUI.CellSize);
-
-                // shadowObject.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
-
-                // shadowObject.transform.SetParent(inventoryUI.transform, true);
-                // rectTransform.SetAsLastSibling();
-                shadowObject.SetActive(true);
                 return;
             }
         }
+    }
 
-        shadowObject.SetActive(false);
+    private bool TryUpdateShadowForSlot(RaycastResult result)
+    {
+        SlotOnDropHandler slotHandler = result.gameObject.GetComponent<SlotOnDropHandler>();
+        if (slotHandler == null) return false;
+
+        RectTransform slotRect = result.gameObject.GetComponent<RectTransform>();
+        shadowRect.sizeDelta = slotRect.sizeDelta;
+        shadowObject.transform.SetParent(slotRect, false);
+        shadowRect.anchoredPosition = Vector2.zero;
+        shadowObject.transform.SetParent(inventoryUI.transform, true);
+        rectTransform.SetAsLastSibling();
+        shadowObject.SetActive(true);
+
+        return true;
+    }
+
+    private bool TryUpdateShadowForGrid(RaycastResult result, PointerEventData eventData)
+    {
+        ItemGridUI itemGridUI = result.gameObject.GetComponent<ItemGridUI>();
+        if (itemGridUI == null) return false;
+
+        shadowObject.transform.SetParent(result.gameObject.transform, false);
+        shadowRect.sizeDelta = new Vector2(itemUI.ItemData.cellSize.x * InventoryUI.CellSize, itemUI.ItemData.cellSize.y * InventoryUI.CellSize);
+        
+        Vector2 localPosition = result.gameObject.transform.InverseTransformPoint(eventData.position);
+        int row = Mathf.FloorToInt(-localPosition.y / InventoryUI.CellSize);
+        int col = Mathf.FloorToInt(localPosition.x / InventoryUI.CellSize);
+        shadowRect.anchoredPosition = new Vector2(col * InventoryUI.CellSize, -row * InventoryUI.CellSize);
+
+        shadowObject.SetActive(true);
+        return true;
     }
 
     private bool TryPlaceItem(PointerEventData eventData)
@@ -181,39 +168,39 @@ public class ItemDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
         foreach (var result in raycastResults)
         {
-            SlotUI targetSlot = result.gameObject.GetComponent<SlotUI>();
-            if (targetSlot != null && targetSlot.IsEmpty())
+            if (TryPlaceInSlot(result) || TryPlaceInGrid(result, eventData))
             {
-                targetSlot.PlaceItem(itemUI);
                 return true;
-            }
-
-            ItemGridUI targetGrid = result.gameObject.GetComponent<ItemGridUI>();
-
-            if (targetGrid != null)
-            {
-                Vector2 localPosition = result.gameObject.transform.InverseTransformPoint(eventData.position);
-                int row = Mathf.FloorToInt(-localPosition.y / InventoryUI.CellSize);
-                int col = Mathf.FloorToInt(localPosition.x / InventoryUI.CellSize);
-
-                if (inventoryUI.itemGridUI.CanPlaceItemAtPosition(itemUI, row, col))
-                {
-                    inventoryUI.itemGridUI.PlaceItem(itemUI, row, col);
-                    return true;
-                }
             }
         }
 
         return false;
     }
 
-    private int GetGridRow()
+    private bool TryPlaceInSlot(RaycastResult result)
     {
-        return Mathf.FloorToInt(-originalPosition.y / InventoryUI.CellSize);
+        SlotUI targetSlot = result.gameObject.GetComponent<SlotUI>();
+        if (targetSlot == null || !targetSlot.IsEmpty()) return false;
+
+        targetSlot.PlaceItem(itemUI);
+        return true;
     }
 
-    private int GetGridCol()
+    private bool TryPlaceInGrid(RaycastResult result, PointerEventData eventData)
     {
-        return Mathf.FloorToInt(originalPosition.x / InventoryUI.CellSize);
+        ItemGridUI targetGrid = result.gameObject.GetComponent<ItemGridUI>();
+        if (targetGrid == null) return false;
+
+        Vector2 localPosition = result.gameObject.transform.InverseTransformPoint(eventData.position);
+        int row = Mathf.FloorToInt(-localPosition.y / InventoryUI.CellSize);
+        int col = Mathf.FloorToInt(localPosition.x / InventoryUI.CellSize);
+
+        if (!inventoryUI.itemGridUI.CanPlaceItemAtPosition(itemUI, row, col)) return false;
+
+        inventoryUI.itemGridUI.PlaceItem(itemUI, row, col);
+        return true;
     }
+
+    private int GetGridRow() => Mathf.FloorToInt(-originalPosition.y / InventoryUI.CellSize);
+    private int GetGridCol() => Mathf.FloorToInt(originalPosition.x / InventoryUI.CellSize);
 }
